@@ -47,44 +47,13 @@
 
 ;; --- Quil functions ---
 
-(defn setup []
-  ; Set frame rate to 30 frames per second.
-  (q/frame-rate 30)
 
-  ; Set color mode to HSB (HSV) instead of default RGB.
-  (q/color-mode :hsb)
-
-  ; setup function returns initial state. It contains
-  ; an initial set of rectangles
-  {:rects
-     (seq
-      [[0 0 20 20]
-       [30 30 60 360]
-       [300 300 325 125]])
-   }
-  )
+(defn generate-ground []
+  (generate-rects 0 (* (q/random 0.8 0.5) (q/height)) 200))
 
 
 ;;(defn sequential-random-ints [min-step max-step]
 ;;  (iterate + ((rand-int max-step))))
-
-(defn calculate_width [x]
-  (q/random x
-            ;; the least of x + 1/5-screen-width and screen-width
-            (min (+ x (/ (q/width) 5))
-                 (q/width))))
-
-(defn calculate_height [y height-change]
-  (let [min-height (* (q/height) 0.7)]
-    (q/random
-     ;; the height of the previous rect +- between 100% and 50% of height-change
-     (max (min (+ y (* (* height-change
-                     (q/random 1.0 0.5))
-                  (q/random -1 1)))
-               min-height)
-          (* (q/height) 0.5))
-     min-height
-     )))
 
 ;; Generates the rects for a room
 (defn generate-rects [starting-x
@@ -93,16 +62,28 @@
                       ;; starting-height-ceiling,
                       ;; corridor-height
                       ]
-  (loop [x starting-x
-         y starting-height-floor
+  (loop [min-x starting-x
+         prev-y starting-height-floor
          rectangles ()]
-    (if (>= x (q/width))
+    (if (>= min-x (q/width))
       rectangles
       (let [
-            width (calculate_width x)
-            height (calculate_height y height-change)
+            ;; the least of x + 1/15-screen-width and screen-width
+            width (q/random (/ (q/width) 30) (/ (q/width) 20))
+            min-y (let [min-height (* (q/height) 0.7)]
+                    (q/random
+                     ;; the height of the previous rect +- between 100% and 50% of height-change
+                     (max (min (+ prev-y (* (* height-change
+                                               (q/random 1.5 0.5))
+                                            (q/random -1 1)))
+                               min-height)
+                          (* (q/height) 0.5))
+                     min-height))
             ]
-        (recur (+ x width) height (conj rectangles [x, height, width, (q/height)])))))
+        (recur (+ min-x width) min-y (conj rectangles [min-x, min-y,
+                                                       (min (+ min-x width)
+                                                            (q/width)),
+                                                       (q/height)])))))
 
   ;; Generate blocks from left to right
   ;; some possibility of gaps between
@@ -137,11 +118,27 @@
   ;; )
 )
 
+
+(defn setup []
+  ; Set frame rate to 30 frames per second.
+  (q/frame-rate 30)
+
+  ; Set color mode to HSB (HSV) instead of default RGB.
+  (q/color-mode :hsb)
+
+  ; setup function returns initial state. It contains
+  ; an initial set of rectangles
+  {:rects (generate-ground)
+   }
+  )
+
+
 (defn on-key-typed [state event]
   (cond
    (= (:raw-key event) \r)
-   (assoc state :rects (generate-rects 0 (* (q/random 0.8 0.5) (q/height)) 200))
+   (assoc state :rects (generate-ground))
    :else state))
+
 
 (defn update [state]
 
