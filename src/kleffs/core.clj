@@ -9,7 +9,7 @@
 ;; Boot the Supercollider server
 ;(boot-external-server)
 
-;; (definst saw-wave [freq 440 attack 0.01 sustain 0.4 release 0.1 vol 0.4] 
+;; (definst saw-wave [freq 440 attack 0.01 sustain 0.4 release 0.1 vol 0.4]
 ;;   (* (env-gen (env-lin attack sustain release) 1 1 0 1 FREE)
 ;;      (saw freq)
 ;;      vol))
@@ -42,7 +42,7 @@
 ;;   (at (m (+ 0 beat-num)) (play-chord (chord :C4 :major)))
 ;;   (at (m (+ 4 beat-num)) (play-chord (chord :G3 :major)))
 ;;   (at (m (+ 8 beat-num)) (play-chord (chord :A3 :minor)))
-;;   (at (m (+ 14 beat-num)) (play-chord (chord :F3 :major)))  
+;;   (at (m (+ 14 beat-num)) (play-chord (chord :F3 :major)))
 ;; )
 
 ;; --- Quil functions ---
@@ -57,29 +57,52 @@
   ; setup function returns initial state. It contains
   ; an initial set of rectangles
   {:rects
-     (seq 
+     (seq
       [[0 0 20 20]
        [30 30 60 360]
-       [300 300 325 125]]) 
-   })
+       [300 300 325 125]])
+   }
+  )
 
-(defn generate-rect [{ :keys [min-x min-y max-x max-y rects]
-                       :as state }]
-  (let [width  (q/random min-x max-x)
-        height (q/random min-y max-y)]
-    (assoc state 
-      :min-x (+ min-x width)
-      :rects (conj rects [min-x min-y width height]))))
 
-(defn sequential-random-ints [min-step max-step]
-  (iterate + ((rand-int max-step))))
+;;(defn sequential-random-ints [min-step max-step]
+;;  (iterate + ((rand-int max-step))))
 
-(defn generate-rects [num]
+(defn calculate_width [x]
+  (q/random x
+            ;; the least of x + 1/5-screen-width and screen-width
+            (min (+ x (/ (q/width) 5))
+                 (q/width))))
 
-  (repeatedly num
-   (fn []
-     [(q/random 0 500) (q/random 0 500) 
-      (q/random 30 300) (q/random 30 300)]))
+(defn calculate_height [y height-change]
+  (let [min-height (* (q/height) 0.7)]
+    (q/random
+     ;; the height of the previous rect +- between 100% and 50% of height-change
+     (max (min (+ y (* (* height-change
+                     (q/random 1.0 0.5))
+                  (q/random -1 1)))
+               min-height)
+          (* (q/height) 0.5))
+     min-height
+     )))
+
+;; Generates the rects for a room
+(defn generate-rects [starting-x
+                      starting-height-floor
+                      height-change
+                      ;; starting-height-ceiling,
+                      ;; corridor-height
+                      ]
+  (loop [x starting-x
+         y starting-height-floor
+         rectangles ()]
+    (if (>= x (q/width))
+      rectangles
+      (let [
+            width (calculate_width x)
+            height (calculate_height y height-change)
+            ]
+        (recur (+ x width) height (conj rectangles [x, height, width, (q/height)])))))
 
   ;; Generate blocks from left to right
   ;; some possibility of gaps between
@@ -92,7 +115,7 @@
 
   ;; (take 5 (sequential-random-ints 1 5))
 
-  ;; (reduce generate-rect 
+  ;; (reduce generate-rect
   ;;         { :min-x 0 :min-y 0
   ;;           :max-x (q/width) :max-y (q/height) }
 
@@ -104,10 +127,10 @@
   ;;   (if (= min-x max-x)
   ;;     rects
   ;;     (recur
-       
+
   ;;      (conj rects (generate-rect min-x min-y max-x max-y))
 
-  ;; (let 
+  ;; (let
   ;;     [fold-state {:x 0 :blocks []}
   ;;      block-height (q/random 50 200)]
   ;;   [[(:x fold-state) (- (q/height) block-height) (q/random 50 500) block-height]]
@@ -115,9 +138,9 @@
 )
 
 (defn on-key-typed [state event]
-  (cond 
+  (cond
    (= (:raw-key event) \r)
-     (assoc state :rects (generate-rects 5))
+   (assoc state :rects (generate-rects 0 (* (q/random 0.8 0.5) (q/height)) 200))
    :else state))
 
 (defn update [state]
@@ -127,9 +150,9 @@
 
   ;; --- These will be added back when Overtone is turned back on
 
-  ;; (let 
+  ;; (let
   ;;     [beat (mod (metro-beat metro) (metro-bpb metro))]
-    
+
   ;;   ;; (if (not= (:beat state) beat)
   ;;   ;;   (at (now) (play-chord (chord-progression beat))))
 
@@ -138,7 +161,7 @@
   ;;     :beat beat))
 )
 
-(defn draw [state] 
+(defn draw [state]
   ; Clear the sketch by filling it with a light blue color
   (q/background 150 125 255)
 
