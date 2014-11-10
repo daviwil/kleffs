@@ -48,76 +48,47 @@
 ;; --- Quil functions ---
 
 
-(defn generate-ground []
-  (generate-rects 0 (* (q/random 0.8 0.5) (q/height)) 200))
+(defn generate-ground [min-x min-y]
+  [min-x
+   min-y
+   (min (+ min-x
+           (int (q/random (/ (q/width) 100) (/ (q/width) 50))))
+        (q/width))
+   (q/height)])
 
+(defn generate-ceiling [min-x width max-y]
+  ;;  (generate-rect min-x 0 width (q/width) max-y )
+  [min-x 0 (+ min-x width) max-y])
 
-;;(defn sequential-random-ints [min-step max-step]
-;;  (iterate + ((rand-int max-step))))
-
-;; Generates the rects for a room
-(defn generate-rects [starting-x
-                      starting-height-floor
-                      height-change
-                      ;; starting-height-ceiling,
-                      ;; corridor-height
-                      ]
+(defn generate-room [starting-x
+                     starting-height-floor
+                     height-change
+                     corridor-height
+                     underground]
   (loop [min-x starting-x
          prev-y starting-height-floor
          rectangles ()]
     (if (>= min-x (q/width))
       rectangles
-      (let [
-            ;; the least of x + 1/15-screen-width and screen-width
-            width (q/random (/ (q/width) 30) (/ (q/width) 20))
-            min-y (let [min-height (* (q/height) 0.7)]
-                    (q/random
-                     ;; the height of the previous rect +- between 100% and 50% of height-change
-                     (max (min (+ prev-y (* (* height-change
-                                               (q/random 1.5 0.5))
-                                            (q/random -1 1)))
-                               min-height)
-                          (* (q/height) 0.5))
-                     min-height))
+      (let [min-y (max (min (+ prev-y (* (* height-change
+                                            (q/random 1.5 0.5))
+                                         (q/random -1 1)))
+                            (* (q/height) 0.95))
+                       (* (q/height) 0.6))
+            ground (generate-ground min-x min-y)
+            width (first (rest (rest ground)))
+            ceiling (if (true? underground)
+                      ;; Most of the ceiling block dim is based on the floor below it (To avoid bad collisions)
+                      (generate-ceiling (first ground) width (- min-y corridor-height))
+                      [])
             ]
-        (recur (+ min-x width) min-y (conj rectangles [min-x, min-y,
-                                                       (min (+ min-x width)
-                                                            (q/width)),
-                                                       (q/height)])))))
+        (recur (+ min-x width) min-y (conj rectangles (conj ground ceiling)))))))
 
-  ;; Generate blocks from left to right
-  ;; some possibility of gaps between
-  ;; Use up available screen space
+(defn generate-room-random []
+  (generate-room 0 (* (q/random 0.8 0.5) (q/height)) 200 30 true))
 
-  ;; Generation links
-  ;; http://fbksoft.com/procedural-level-generation-for-a-2d-platformer/
-
-  ;; *** The following section is some scratch code that doesn't work right yet ***
-
-  ;; (take 5 (sequential-random-ints 1 5))
-
-  ;; (reduce generate-rect
-  ;;         { :min-x 0 :min-y 0
-  ;;           :max-x (q/width) :max-y (q/height) }
-
-
-  ;; Is there an appropriate higher order function to use here?
-  ;; (loop [min-x 0 min-y 0
-  ;;        max-x (q/width) max-y (q/height)
-  ;;        rects []]
-  ;;   (if (= min-x max-x)
-  ;;     rects
-  ;;     (recur
-
-  ;;      (conj rects (generate-rect min-x min-y max-x max-y))
-
-  ;; (let
-  ;;     [fold-state {:x 0 :blocks []}
-  ;;      block-height (q/random 50 200)]
-  ;;   [[(:x fold-state) (- (q/height) block-height) (q/random 50 500) block-height]]
-  ;; )
-)
-
+;;(defn sequential-random-ints [min-step max-step]
+;;  (iterate + ((rand-int max-step))))
 
 (defn setup []
   ; Set frame rate to 30 frames per second.
@@ -128,7 +99,7 @@
 
   ; setup function returns initial state. It contains
   ; an initial set of rectangles
-  {:rects (generate-ground)
+  {:rects (generate-room-random)
    }
   )
 
@@ -136,7 +107,7 @@
 (defn on-key-typed [state event]
   (cond
    (= (:raw-key event) \r)
-   (assoc state :rects (generate-ground))
+   (assoc state :rects (generate-room-random))
    :else state))
 
 
