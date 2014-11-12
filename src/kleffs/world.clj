@@ -1,7 +1,7 @@
 (ns kleffs.world
   (:require [quil.core :as q]
             [quil.middleware :as m])
-  ;(:use overtone.core)
+  (:use kleffs.utils)
   (:gen-class))
 
 (defn generate-ground [min-x min-y]
@@ -43,3 +43,17 @@
 (defn generate-room-random []
   (generate-room 0 (* (q/random 0.8 0.5) (q/height)) 200 30 true))
 
+(defn generate-overworld [width height]
+  (into {} ; Puts the result list from the next form into a map
+        (for [x (range 0 width)
+              y (range 0 height)]
+
+          (let [screen-rects (cond
+                              (= y 0) (generate-room 0 (* (q/random 0.8 0.5) (q/height)) 200 30 false)
+                              :else (generate-room 0 (* (q/random 0.8 0.5) (q/height)) 200 30 true))
+                fg-color (rand-color [0 255] [200 255] [50 128])
+                bg-color (rand-color [0 255] [50 128] [75 220])]
+
+            [[x y] {:rects screen-rects
+                    :fg-color fg-color
+                    :bg-color bg-color}]))))
