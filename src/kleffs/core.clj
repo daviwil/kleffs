@@ -1,7 +1,8 @@
 (ns kleffs.core
   (:require [quil.core :as q]
             [quil.middleware :as m]
-            [kleffs.world :as world])
+            [kleffs.world :as world]
+            [kleffs.character :as character])
   (:use kleffs.utils)
   ;(:use overtone.core)
   (:gen-class))
@@ -49,6 +50,9 @@
 
 ;; --- Quil functions ---
 
+;;(defn sequential-random-ints [min-step max-step]
+;;  (iterate + ((rand-int max-step))))
+
 (defn setup []
   ; Set frame rate to 30 frames per second.
   (q/frame-rate 30)
@@ -65,7 +69,8 @@
      {:overworld overworld
       :world-size world-size
       :current-screen-coords [0 0]
-      :current-screen-data (get overworld [0 0]) })))
+      :current-screen-data (get overworld [0 0])
+      :kleff (character/generate-kleff) })))
 
 (defn move-to-screen [screen-pos state]
   {:pre (vector? screen-pos)}
@@ -73,7 +78,8 @@
   (assoc
     state
     :current-screen-coords screen-pos
-    :current-screen-data (get (:overworld state) screen-pos)))
+    :current-screen-data (get (:overworld state) screen-pos)
+    ))
 
 (defn on-key-pressed [state event]
   (let [{[screen-x screen-y]        :current-screen-coords
@@ -92,6 +98,8 @@
 
      (= (:key event) :down)
        (move-to-screen [screen-x (inc-max screen-y (dec world-height))] state)
+
+     (= (:raw-key event) \k) (assoc state :kleff (character/generate-kleff))
 
      :else state)))
 
@@ -115,8 +123,9 @@
 
 (defn draw [{{[bg-h bg-s bg-v] :bg-color
               [fg-h fg-s fg-v] :fg-color
-              rects :rects}  :current-screen-data
-             screen-pos      :current-screen-coords}]
+              rects :rects }  :current-screen-data
+             screen-pos      :current-screen-coords
+             kleff :kleff}]
 
   (q/background bg-h bg-s bg-v)
 
@@ -131,6 +140,9 @@
   (q/text-size 20)
   (q/text (format "Screen pos: %s" screen-pos) 10 490)
   (q/text "Arrow keys to change screen" 500 490)
+
+  ; Draw kleff
+  (character/draw-kleff kleff)
 
   ;; -- This draws a metronome graphic when it is on.  Uncomment
   ;; -- this once we start using Overtone again.
