@@ -60,6 +60,15 @@
   ; Set color mode to HSB (HSV) instead of default RGB.
   (q/color-mode :hsb)
 
+(defn move-to-screen [screen-pos state]
+  {:pre (vector? screen-pos)}
+  (println screen-pos)
+  (assoc
+    state
+    :current-screen-coords screen-pos
+    :current-screen-data (get (:overworld state) screen-pos)
+    ))
+
   ; setup function returns initial state. It contains
   ; an initial set of rectangles
   (let [world-size [5 5]
@@ -72,36 +81,30 @@
       :current-screen-data (get overworld [0 0])
       :kleff (character/generate-kleff) })))
 
-(defn move-to-screen [screen-pos state]
-  {:pre (vector? screen-pos)}
-  (println screen-pos)
-  (assoc
-    state
-    :current-screen-coords screen-pos
-    :current-screen-data (get (:overworld state) screen-pos)
-    ))
+(defn on-key-pressed [{[screen-x screen-y]        :current-screen-coords
+                       [world-width world-height] :world-size
+                       :as state}
+                      {raw-key :raw-key
+                       key :key
+                       :as event}]
+  (cond
+   (= (:raw-key event) \r) (assoc state :rects (world/generate-room-random))
 
-(defn on-key-pressed [state event]
-  (let [{[screen-x screen-y]        :current-screen-coords
-         [world-width world-height] :world-size} state]
-    (cond
-     (= (:raw-key event) \r) (assoc state :rects (world/generate-room-random))
+   (= (:key event) :left)
+     (move-to-screen [(dec-min screen-x 0) screen-y] state)
 
-     (= (:key event) :left)
-       (move-to-screen [(dec-min screen-x 0) screen-y] state)
+   (= (:key event) :right)
+     (move-to-screen [(inc-max screen-x (dec world-width)) screen-y] state)
 
-     (= (:key event) :right)
-       (move-to-screen [(inc-max screen-x (dec world-width)) screen-y] state)
+   (= (:key event) :up)
+     (move-to-screen [screen-x (dec-min screen-y 0)] state)
 
-     (= (:key event) :up)
-       (move-to-screen [screen-x (dec-min screen-y 0)] state)
+   (= (:key event) :down)
+     (move-to-screen [screen-x (inc-max screen-y (dec world-height))] state)
 
-     (= (:key event) :down)
-       (move-to-screen [screen-x (inc-max screen-y (dec world-height))] state)
+   (= (:raw-key event) \k) (assoc state :kleff (character/generate-kleff))
 
-     (= (:raw-key event) \k) (assoc state :kleff (character/generate-kleff))
-
-     :else state)))
+   :else state))
 
 (defn update [state]
 
