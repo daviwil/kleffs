@@ -1,25 +1,15 @@
 (ns kleffs.character
   (:require [quil.core :as q]
-            [quil.middleware :as m])
+            [quil.middleware :as m]
+            [kleffs.shape :as shape])
   (:gen-class))
 
 ;; Kleffs Generator
-(defn generate-circle []
-  {:shape-type "circle"
-   :color [(q/random 360) 100 100]
-   :diameter (q/random 7 14)})
-
-(defn generate-shape []
-  (generate-circle))
-
 (defn generate-kleff []
-  (merge {:position [(int (/ (q/width) 2)) (int (/ (q/height) 2))]}
-         (generate-shape)))
+  {:position [(int (/ (q/width) 2)) (int (/ (q/height) 2))]
+   :shape (shape/generate-shape "circle")})
 
 ;; Only call this method from within quil-draw
-(defn draw-kleff [{shape-type :shape-type
-                   [hue saturation brightness] :color
-                   [x y] :position :as kleff}]
-    (q/fill hue saturation brightness)
-    (cond
-     (= shape-type (str "circle")) (q/ellipse x y (:diameter kleff) (:diameter kleff))))
+(defn draw-kleff [{shape :shape
+                   position :position}]
+  (shape/draw-shape shape position))
