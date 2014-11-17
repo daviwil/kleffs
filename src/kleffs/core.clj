@@ -4,54 +4,64 @@
             [kleffs.world :as world]
             [kleffs.character :as character])
   (:use kleffs.utils)
-  ;(:use overtone.core)
+  ;; (:use overtone.core)
+  (:use overtone.live)
   (:gen-class))
 
 ;; --- Overtone methods, don't call these just yet ---
 
 ;; Boot the Supercollider server
-;(boot-external-server)
+;;(boot-external-server)
 
-;; (definst saw-wave [freq 440 attack 0.01 sustain 0.4 release 0.1 vol 0.4]
-;;   (* (env-gen (env-lin attack sustain release) 1 1 0 1 FREE)
-;;      (saw freq)
-;;      vol))
+(definst saw-wave [freq 440 attack 0.01 sustain 0.4 release 0.1 vol 0.4]
+  (* (env-gen (env-lin attack sustain release) 1 1 0 1 FREE)
+     (saw freq)
+     vol))
 
-;; (defn saw2 [music-note]
-;;     (saw-wave (midi->hz (note music-note))))
+(defn saw2 [music-note]
+    (saw-wave (midi->hz (note music-note))))
 
-;; (defn play-chord [a-chord]
-;;   (doseq [note a-chord] (saw2 note)))
+(defn play-chord [a-chord]
+  (doseq [note a-chord] (saw2 note)))
 
-;; (defn chord-progression-time []
-;;   (let [time (now)]
-;;     (at time (play-chord (chord :C4 :major)))
-;;     (at (+ 1000 time) (play-chord (chord :G3 :major)))
-;;     (at (+ 2000 time) (play-chord (chord :F3 :sus4)))
-;;     (at (+ 2700 time) (play-chord (chord :F3 :major)))
-;;     (at (+ 3200 time) (play-chord (chord :G3 :major)))))
+(defn chord-progression-time []
+  (let [time (now)]
+    (at time (play-chord (chord :C4 :major)))
+    (at (+ 1000 time) (play-chord (chord :G3 :major)))
+    (at (+ 2000 time) (play-chord (chord :F3 :sus4)))
+    (at (+ 2700 time) (play-chord (chord :F3 :major)))
+    (at (+ 3200 time) (play-chord (chord :G3 :major)))))
 
-;; (defonce metro (metronome 120))
-;; (comment
-;;   (metro-bpm metro 120))
+(defonce metro (metronome 120))
+(comment
+  (metro-bpm metro 120))
 
-;; (def chord-progression
-;;   [(chord :C4 :major)
-;;    (chord :G3 :major)
-;;    (chord :F3 :sus4)
-;;    (chord :F3 :major)])
+(def chord-progression
+  [(chord :C4 :major)
+   (chord :G3 :major)
+   (chord :F3 :sus4)
+   (chord :F3 :major)])
 
-;; (defn chord-progression-beat [m beat-num]
-;;   (at (m (+ 0 beat-num)) (play-chord (chord :C4 :major)))
-;;   (at (m (+ 4 beat-num)) (play-chord (chord :G3 :major)))
-;;   (at (m (+ 8 beat-num)) (play-chord (chord :A3 :minor)))
-;;   (at (m (+ 14 beat-num)) (play-chord (chord :F3 :major)))
-;; )
+(defn chord-progression-beat [m beat-num]
+  (at (m (+ 0 beat-num)) (play-chord (chord :C4 :major)))
+  (at (m (+ 4 beat-num)) (play-chord (chord :G3 :major)))
+  (at (m (+ 8 beat-num)) (play-chord (chord :A3 :minor)))
+  (at (m (+ 14 beat-num)) (play-chord (chord :F3 :major)))
+)
 
 ;; --- Quil functions ---
 
 ;;(defn sequential-random-ints [min-step max-step]
 ;;  (iterate + ((rand-int max-step))))
+
+(defn move-to-screen [screen-pos state]
+  {:pre (vector? screen-pos)}
+  ;(println screen-pos)
+  (assoc
+    state
+    :current-screen-coords screen-pos
+    :current-screen-data (get (:overworld state) screen-pos)
+    ))
 
 (defn setup []
   ; Set frame rate to 30 frames per second.
@@ -59,15 +69,6 @@
 
   ; Set color mode to HSB (HSV) instead of default RGB.
   (q/color-mode :hsb)
-
-(defn move-to-screen [screen-pos state]
-  {:pre (vector? screen-pos)}
-  (println screen-pos)
-  (assoc
-    state
-    :current-screen-coords screen-pos
-    :current-screen-data (get (:overworld state) screen-pos)
-    ))
 
   ; setup function returns initial state. It contains
   ; an initial set of rectangles
@@ -79,7 +80,7 @@
       :world-size world-size
       :current-screen-coords [0 0]
       :current-screen-data (get overworld [0 0])
-      :kleff (character/generate-kleff) })))
+      :kleff (character/generate-kleff)})))
 
 (defn on-key-pressed [{[screen-x screen-y]        :current-screen-coords
                        [world-width world-height] :world-size
@@ -109,24 +110,25 @@
 (defn update [state]
 
   ;; Just return the state without touching it for now
-  state
+  ;;state
 
   ;; --- These will be added back when Overtone is turned back on
 
-  ;; (let
-  ;;     [beat (mod (metro-beat metro) (metro-bpb metro))]
+  (let
+      [beat (mod (metro-beat metro) (metro-bpb metro))]
 
-  ;;   ;; (if (not= (:beat state) beat)
-  ;;   ;;   (at (now) (play-chord (chord-progression beat))))
+;;     (if (not= (:beat state) beat)
+;;       (at (now) (play-chord (chord-progression beat))))
 
-  ;;   (assoc
-  ;;     state
-  ;;     :beat beat))
+    (assoc
+      state
+      :beat beat))
 )
 
 (defn draw [{{[bg-h bg-s bg-v] :bg-color
               [fg-h fg-s fg-v] :fg-color
-              rects :rects }  :current-screen-data
+              rects :rects
+              artifact :artifact}  :current-screen-data
              screen-pos      :current-screen-coords
              kleff :kleff}]
 
@@ -147,13 +149,17 @@
   ; Draw kleff
   (character/draw-kleff kleff)
 
+  ; Draw artifact
+  (if (not (nil? artifact))
+    (artifact/draw-artifact artifact))
+
   ;; -- This draws a metronome graphic when it is on.  Uncomment
   ;; -- this once we start using Overtone again.
-  ;; (let
-  ;;     [beat (mod (metro-beat metro) (metro-bpb metro))
-  ;;      offset (+ 30 (* beat 30))]
-  ;;  (q/fill offset 255 255)
-  ;;  (q/ellipse offset 30 30 30))
+  (let
+      [beat (mod (metro-beat metro) (metro-bpb metro))
+       offset (+ 30 (* beat 30))]
+   (q/fill offset 255 255)
+   (q/ellipse offset 30 30 30))
 )
 
 (q/defsketch kleffs
