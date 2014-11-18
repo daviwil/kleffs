@@ -2,6 +2,7 @@
   (:require [quil.core :as q]
             [quil.middleware :as m]
             [kleffs.world :as world]
+            [kleffs.artifact :as artifact]
             [kleffs.character :as character])
   (:use kleffs.utils)
   ;; (:use overtone.core)
