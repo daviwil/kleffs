@@ -2,55 +2,13 @@
   (:require [quil.core :as q]
             [quil.middleware :as m]
             [kleffs.world :as world]
+            [kleffs.music :as music]
             [kleffs.artifact :as artifact]
             [kleffs.character :as character])
   (:use kleffs.utils)
   ;; (:use overtone.core)
   (:use overtone.live)
   (:gen-class))
-
-;; --- Overtone methods, don't call these just yet ---
-
-;; Boot the Supercollider server
-;;(boot-external-server)
-
-(definst saw-wave [freq 440 attack 0.01 sustain 0.4 release 0.1 vol 0.4]
-  (* (env-gen (env-lin attack sustain release) 1 1 0 1 FREE)
-     (saw freq)
-     vol))
-
-(defn saw2 [music-note]
-    (saw-wave (midi->hz (note music-note))))
-
-(defn play-chord [a-chord]
-  (doseq [note a-chord] (saw2 note)))
-
-(defn chord-progression-time []
-  (let [time (now)]
-    (at time (play-chord (chord :C4 :major)))
-    (at (+ 1000 time) (play-chord (chord :G3 :major)))
-    (at (+ 2000 time) (play-chord (chord :F3 :sus4)))
-    (at (+ 2700 time) (play-chord (chord :F3 :major)))
-    (at (+ 3200 time) (play-chord (chord :G3 :major)))))
-
-(defonce metro (metronome 120))
-(comment
-  (metro-bpm metro 120))
-
-(def chord-progression
-  [(chord :C4 :major)
-   (chord :G3 :major)
-   (chord :F3 :sus4)
-   (chord :F3 :major)])
-
-(defn chord-progression-beat [m beat-num]
-  (at (m (+ 0 beat-num)) (play-chord (chord :C4 :major)))
-  (at (m (+ 4 beat-num)) (play-chord (chord :G3 :major)))
-  (at (m (+ 8 beat-num)) (play-chord (chord :A3 :minor)))
-  (at (m (+ 14 beat-num)) (play-chord (chord :F3 :major)))
-)
-
-;; --- Quil functions ---
 
 ;;(defn sequential-random-ints [min-step max-step]
 ;;  (iterate + ((rand-int max-step))))
@@ -109,22 +67,7 @@
    :else state))
 
 (defn update [state]
-
-  ;; Just return the state without touching it for now
-  ;;state
-
-  ;; --- These will be added back when Overtone is turned back on
-
-  (let
-      [beat (mod (metro-beat metro) (metro-bpb metro))]
-
-;;     (if (not= (:beat state) beat)
-;;       (at (now) (play-chord (chord-progression beat))))
-
-    (assoc
-      state
-      :beat beat))
-)
+  (music/update-music state))
 
 (defn draw [{{[bg-h bg-s bg-v] :bg-color
               [fg-h fg-s fg-v] :fg-color
@@ -154,14 +97,8 @@
   (if (not (nil? artifact))
     (artifact/draw-artifact artifact))
 
-  ;; -- This draws a metronome graphic when it is on.  Uncomment
-  ;; -- this once we start using Overtone again.
-  (let
-      [beat (mod (metro-beat metro) (metro-bpb metro))
-       offset (+ 30 (* beat 30))]
-   (q/fill offset 255 255)
-   (q/ellipse offset 30 30 30))
-)
+  ; Draw a metronome graphic
+  (music/draw-metronome))
 
 (q/defsketch kleffs
   :title "Kleffs"
